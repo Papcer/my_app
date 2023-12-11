@@ -49,10 +49,11 @@ class Event(models.Model):
     city = models.CharField(max_length=255)
     zipcode = models.CharField(max_length=255)
     street = models.CharField(max_length=255)
+    calendarID = models.CharField(max_length=255)
     
 class Log(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    event = models.ForeignKey(Event, on_delete=models.CASCADE, null=True, blank=True)
+    event = models.ForeignKey(Event, on_delete=models.SET_NULL, null=True, blank=True)
     log_type = models.CharField(max_length=255)
     log_description = models.TextField()
     timestamp = models.DateTimeField(default=timezone.now)
