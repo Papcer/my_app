@@ -19,6 +19,5 @@ class TestSeeder(TestCase):
             self.assertIsNotNone(user_roles)
 
 if __name__ == '__main__':
-    # Run the tests
     import unittest
     unittest.main()

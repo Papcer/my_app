@@ -139,5 +139,8 @@ pg_data
 
 node_modules
 web_modules
+aplikacja/token.json
+aplikacja.token.json
 
 .vscode
+aplikacja/token.json

@@ -20,8 +20,9 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
-from aplikacja.views import (register, login_view, save_google_calendar, authorize_view, get_google_events , logout_view
-)
+from aplikacja.views import (register, login_view, save_google_calendar, authorize_view, get_google_events, logout_view,
+                             delete_event, edit_event
+                             )
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -29,9 +30,12 @@ urlpatterns = [
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('login/', login_view, name='login'),
     path('register/', register, name='register'),
-    path('save_google_calendar/', save_google_calendar, name='save_google_calendar'),
-    path('get_google_events/', get_google_events, name='get_google_events'),
     path('authorize/', authorize_view, name='authorize'),
     path('logout/', logout_view, name='logout'),
+    #GOOGLE CALENDAR
+    path('save_google_calendar/', save_google_calendar, name='save_google_calendar'),
+    path('get_google_events/', get_google_events, name='get_google_events'),
+    path('edit_event/<str:event_id>/', edit_event , name='edit_event'),
+    path('delete_event/<str:event_id>/', delete_event, name='logout'),
 ]
 

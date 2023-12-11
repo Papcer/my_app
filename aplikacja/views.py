@@ -1,5 +1,4 @@
 import datetime
-
 from argon2.exceptions import VerifyMismatchError
 from django.http import JsonResponse
 from django.shortcuts import render
@@ -22,6 +21,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
 
+from .decorators import view_permission, add_or_delete_permission
 from .models import User, Role, UserRoles, Event, Log, UserData, PhoneNumbers, UserContact, UserLoginHistory
 from .serializers import ( UserSerializer, RoleSerializer, UserRolesSerializer, EventSerializer, LogSerializer, UserDataSerializer, 
                            PhoneNumbersSerializer, UserContactSerializer, UserLoginHistorySerializer
@@ -146,6 +146,7 @@ def check_for_credentials(request):
 
 @api_view(['POST'])
 @authentication_classes([JWTAuthentication])
+@add_or_delete_permission
 @permission_classes([IsAuthenticated])
 def save_google_calendar(request):
     title = request.data.get('title')
@@ -155,7 +156,7 @@ def save_google_calendar(request):
     attendees = request.data.get('attendees')
     location = request.data.get("location")
     
-    if not title or not description or not start_datetime or not end_datetime:
+    if not title or not description or not start_datetime or not end_datetime or not attendees or not location:
         return Response({'error': 'Wszystkie pola wymagane'}, status=400)
 
     #te metody nie dzialaja, problem z service account
@@ -186,7 +187,6 @@ def save_google_calendar(request):
             'useDefault': True
             }
     }
-    
     try:
         calendar_id = 'primary'
         event = service.events().insert(calendarId = calendar_id, body=event).execute()
@@ -197,6 +197,7 @@ def save_google_calendar(request):
 
 @api_view(['GET'])
 @authentication_classes([JWTAuthentication])
+@view_permission
 @permission_classes([IsAuthenticated])
 def get_google_events(request):
     credentials = check_for_credentials(request)
@@ -223,6 +224,7 @@ def get_google_events(request):
     formatted_events = []
     for event in events:
         formatted_event = {
+            'id': event.get('id', ''),
             'summary': event.get('summary', ''),
             'location': event.get('location', ''),
             'description': event.get('description', ''),
@@ -234,9 +236,71 @@ def get_google_events(request):
 
     return JsonResponse({'events': formatted_events}, json_dumps_params={'ensure_ascii': False},     status=200)
 
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def delete_event(request, event_id):
+    #event_id = request.data.get('event_id')
+    
+    credentials = check_for_credentials(request)
+    if not credentials:
+        return Response({'error': 'Brak ważnego tokenu. Przekierowywanie do autoryzacji.'}, status=401)
+
+    service = build("calendar", "v3", credentials=credentials)
+    
+    try:
+        service.events().delete(calendarId='primary', eventId=event_id).execute()
+
+        return Response({'message': 'Wydarzenie zostało usunięte z kalendarza.'}, status=201)
+    except Exception as e:
+        return Response({'error': f'Problem przy usuwaniu danych z kalendarza: {str(e)}'}, status=500)
+
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@permission_classes([IsAuthenticated])
+def edit_event(request, event_id):
+    title = request.data.get('title')
+    description = request.data.get('description')
+    start_datetime = request.data.get('start_datetime')
+    end_datetime = request.data.get('end_datetime')
+    attendees = request.data.get('attendees')
+    location = request.data.get("location")
+
+    if not title or not description or not start_datetime or not end_datetime or not attendees or not location:
+        return Response({'error': 'Wszystkie pola wymagane'}, status=400)
+
+    credentials = check_for_credentials(request)
+    if not credentials:
+        return Response({'error': 'Brak ważnego tokenu. Przekierowywanie do autoryzacji.'}, status=401)
+
+    service = build("calendar", "v3", credentials=credentials)
+    try:
+        event = service.events().get(calendarId='primary', eventId=event_id).execute()
+        
+        event['summary'] = title
+        event['location'] = location
+        event['description'] = description
+        event['start']['dateTime'] = start_datetime
+        event['end']['dateTime'] = end_datetime
+        event['attendees'] = attendees
+
+        updated_event = service.events().update(calendarId='primary', eventId=event_id, body=event).execute()
+
+        return Response({'message': 'Wydarzenie zostalo zaktualizowane.', 'event_id': updated_event['id']}, status=200)
+    except Exception as e:
+        return Response({'error': f'Problem przy aktualizacji wydarzenia: {str(e)}'}, status=500)
+
 class UserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.all()
     serializer_class = UserSerializer
+
+    def get_queryset(self):
+        # Sprawdź, czy podano parametr ID w zapytaniu
+        user_id = self.kwargs.get('pk')
+
+        if user_id:
+            return User.objects.filter(pk=user_id)
+        else:
+            return User.objects.all()
     
 class RoleViewSet(viewsets.ModelViewSet):
     queryset = Role.objects.all()

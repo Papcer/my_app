@@ -169,8 +169,8 @@ SIMPLE_JWT = {
 
 JWT_AUTH = {
     'JWT_AUTH_HEADER_PREFIX': 'Bearer',
-    'JWT_AUTH_USERNAME_CLAIM': 'id',  # lub 'id', zależnie od Twojej implementacji
-    'JWT_AUTH_FIELD': 'id',  # Zależnie od Twojej implementacji
+    'JWT_AUTH_USERNAME_CLAIM': 'id',
+    'JWT_AUTH_FIELD': 'id',
 }
 
 AUTH_USER_MODEL = 'aplikacja.User'
