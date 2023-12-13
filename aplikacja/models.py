@@ -1,3 +1,4 @@
+from argon2.exceptions import VerifyMismatchError
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from argon2 import PasswordHasher
@@ -23,7 +24,11 @@ class User(AbstractBaseUser):
 
     def check_password(self, raw_password):
         ph = PasswordHasher()
-        return ph.verify(self.password, raw_password)
+        try:
+            ph.verify(self.password, raw_password)
+            return True
+        except VerifyMismatchError:
+            return False
 
     @classmethod
     def create_user(cls, username, password=None):
