@@ -69,33 +69,49 @@ def check_for_credentials(request):
     authorize(request)
     return None
 
-@api_view(['POST'])
-@authentication_classes([JWTAuthentication])
-@add_or_delete_permission
-@permission_classes([IsAuthenticated])
 @swagger_auto_schema(
+    method='post',
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         properties={
-            'title': openapi.Schema(type=openapi.TYPE_STRING),
-            'description': openapi.Schema(type=openapi.TYPE_STRING),
+            'title': openapi.Schema(type=openapi.TYPE_STRING, example='Nowe wydarzenie'),
+            'description': openapi.Schema(type=openapi.TYPE_STRING,example='Opis wydarzenia'),
             'start_datetime': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME),
             'end_datetime': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME),
-            'attendees': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Schema(type=openapi.TYPE_STRING)),
-            'city': openapi.Schema(type=openapi.TYPE_STRING),
-            'street': openapi.Schema(type=openapi.TYPE_STRING),
-            'zipcode': openapi.Schema(type=openapi.TYPE_STRING),
+            'attendees': openapi.Schema(
+                type=openapi.TYPE_ARRAY,
+                items=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'email': openapi.Schema(type=openapi.TYPE_STRING, example='test@test.com'),
+                    },
+                    required=['email'],
+                ),
+                example=[
+                    {"email": "test@test.com"},
+                    {"email": "test2@example.com"}
+                ]),
+            'city': openapi.Schema(type=openapi.TYPE_STRING, example='Nowy Sącz'),
+            'street': openapi.Schema(type=openapi.TYPE_STRING, example='Aleje Batorego'),
+            'zipcode': openapi.Schema(type=openapi.TYPE_STRING,example='33-300'),
         },
         required=['title', 'description', 'start_datetime', 'end_datetime', 'attendees', 'city', 'street', 'zipcode'],
     ),
     responses={
-        201: 'Event added to calendar',
-        400: 'Bad Request',
-        401: 'Unauthorized',
-        500: 'Internal Server Error',
-    }
+        200: openapi.Response('Wydarzenie pomyślnie dodane'),
+        400: openapi.Response('Bad Request'),
+        401: openapi.Response('Użytkownik nie jest zautoryzowany'),
+        500: openapi.Response('Internal Server Error'),
+    },
 )
+@api_view(['POST'])
+@authentication_classes([JWTAuthentication])
+@add_or_delete_permission
+@permission_classes([IsAuthenticated])
 def save_google_calendar(request):
+    """
+    Api, które pozwala zapisać wydarzenie w kalendarzu
+    """
     title = request.data.get('title')
     description = request.data.get('description')
     start_datetime = request.data.get('start_datetime')
@@ -166,11 +182,25 @@ def save_google_calendar(request):
     except Exception as e:
         return Response({'error': f'Problem przy dodawaniu do kalendarza: {str(e)}'}, status=500)
 
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: openapi.Response('Wydarzenia zostały pomyślnie wczytane'),
+        400: openapi.Response('Bad Request'),
+        401: openapi.Response('Użytkownik nie jest zautoryzowany'),
+        500: openapi.Response('Internal Server Error'),
+    },
+)
 @api_view(['GET'])
 @authentication_classes([JWTAuthentication])
 @view_permission
 @permission_classes([IsAuthenticated])
 def get_google_events(request):
+    """
+    Api, które pozwala na pobranie wszystkich eventów
+    Zwracane obiekty:
+        event: wszystkie obiektu eventów zawierające wszystkie informację
+    """
     credentials = check_for_credentials(request)
     if not credentials:
         return Response({'error': 'Brak ważnego tokenu. Przekierowywanie do autoryzacji.'}, status=401)
@@ -207,11 +237,28 @@ def get_google_events(request):
 
     return JsonResponse({'events': formatted_events}, json_dumps_params={'ensure_ascii': False},     status=200)
 
+@swagger_auto_schema(
+    method='get',
+    responses={
+        200: openapi.Response('Wydarzenie zostało pomyslnie wczytane'),
+        400: openapi.Response('Bad Request'),
+        401: openapi.Response('Użytkownik nie jest zautoryzowany'),
+        500: openapi.Response('Internal Server Error'),
+    },
+)
 @api_view(['GET'])
 @authentication_classes([JWTAuthentication])
 @view_permission
 @permission_classes([IsAuthenticated])
 def get_single_google_event(request, event_id):
+    """
+    Api, które pozwala na pobranie istniejącego eventu po podaniu id
+    Wymagane paramtry:
+        -event_id: wskazuje na dany event
+
+    Zwracane obiekty:
+        event: obiekt eventu zawierający wszystkie dane
+    """
     credentials = check_for_credentials(request)
     if not credentials:
         return JsonResponse({'error': 'Brak ważnego tokenu. Przekierowywanie do autoryzacji.'}, status=401)
@@ -236,12 +283,24 @@ def get_single_google_event(request, event_id):
     return JsonResponse({'event': formatted_event}, json_dumps_params={'ensure_ascii': False}, status=200)
 
 
-
+@swagger_auto_schema(
+    method='delete',
+    responses={
+        200: openapi.Response('Wydarzenie zostało usunięte'),
+        400: openapi.Response('Bad Request'),
+        401: openapi.Response('Użytkownik nie jest zautoryzowany'),
+        500: openapi.Response('Internal Server Error'),
+    },
+)
 @api_view(['DELETE'])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def delete_event(request, event_id):
-    #event_id = request.data.get('event_id')
+    """
+    Api, które pozwala na usunięcie istniejącego eventu
+    Wymagane paramtry:
+        -event_id: wskazuje na dany event
+    """
 
     credentials = check_for_credentials(request)
     if not credentials:
@@ -270,10 +329,51 @@ def delete_event(request, event_id):
     except Exception as e:
         return Response({'error': f'Problem przy usuwaniu danych z kalendarza: {str(e)}'}, status=500)
 
+
+@swagger_auto_schema(
+    method='put',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'title': openapi.Schema(type=openapi.TYPE_STRING, example='Nowe wydarzenie'),
+            'description': openapi.Schema(type=openapi.TYPE_STRING,example='Opis wydarzenia'),
+            'start_datetime': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME),
+            'end_datetime': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME),
+            'attendees': openapi.Schema(
+                type=openapi.TYPE_ARRAY,
+                items=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'email': openapi.Schema(type=openapi.TYPE_STRING, example='test@test.com'),
+                    },
+                    required=['email'],
+                ),
+                example=[
+                    {"email": "test@test.com"},
+                    {"email": "test2@example.com"}
+                ]),
+            'city': openapi.Schema(type=openapi.TYPE_STRING, example='Nowy Sącz'),
+            'street': openapi.Schema(type=openapi.TYPE_STRING, example='Aleje Batorego'),
+            'zipcode': openapi.Schema(type=openapi.TYPE_STRING, example='33-300'),
+        },
+        required=['title', 'description', 'start_datetime', 'end_datetime', 'attendees', 'city', 'street', 'zipcode'],
+    ),
+    responses={
+        200: openapi.Response('Wydarzenie pomyślnie dodane'),
+        400: openapi.Response('Bad Request'),
+        401: openapi.Response('Użytkownik nie jest zautoryzowany'),
+        500: openapi.Response('Internal Server Error'),
+    },
+)
 @api_view(['PUT'])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
 def edit_event(request, event_id):
+    """
+    Api, które pozwala na edytowanie istniejącego eventu
+    Wymagane paramtry:
+        -event_id: wskazuje na dany event
+    """
     title = request.data.get('title')
     description = request.data.get('description')
     start_datetime = request.data.get('start_datetime')

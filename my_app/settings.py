@@ -48,11 +48,19 @@ INSTALLED_APPS = [
 
 
 SWAGGER_SETTINGS = {
+    'JSON_EDITOR': True,
+    'USE_SESSION_AUTH': False,
+    'enabled_methods': [
+        'GET',
+        'POST',
+        'PUT',
+        'DELETE',
+    ],
     'SECURITY_DEFINITIONS': {
         'Bearer': {
-            'type' : 'apiKey',
+            'type': 'apiKey',
             'name': 'Authorization',
-            'in' : 'header'
+            'in': 'header',
         }
     }
 }
@@ -176,6 +184,11 @@ REST_FRAMEWORK = {
         #'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.BasicAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_PARSER_CLASSES': (
+        'rest_framework.parsers.FormParser',
+        'rest_framework.parsers.MultiPartParser',
+        'rest_framework.parsers.JSONParser',
     ),
 }
 

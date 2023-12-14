@@ -8,23 +8,35 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User, Role, UserRoles, Event, Log, UserData, PhoneNumbers, UserContact, UserLoginHistory
 from drf_yasg import openapi
 
-@api_view(['POST'])
+
 @swagger_auto_schema(
+    method='post',
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         properties={
-            'username': openapi.Schema(type=openapi.TYPE_STRING, description='login'),
+            'username': openapi.Schema(type=openapi.TYPE_STRING, example='testusername'),
+            'password': openapi.Schema(type=openapi.TYPE_STRING,example='testpassword'),
         },
-        required=['username'],
+        required=['username', 'password'],
     ),
-    responses={200: 'OK', 400: 'Bad Request'},
+    responses={
+        200: openapi.Response('Pomyślnie zarejestrowano użytkownika'),
+        400: openapi.Response('Bad Request'),
+        500: openapi.Response('Internal Server Error'),
+    },
 )
+@api_view(['POST'])
 @permission_classes([AllowAny]) #dostepne dla kazdego
 @csrf_exempt
 def register(request):
     """
-    Register a new user.
-    """
+     Api pozwalające zarejestrować nowego użytkownika
+     Wymagane paramtry:
+         -username: login użytkownika
+         -password: hasło użytkownika
+         
+     """
+    
     if request.method == 'POST':
         username = request.data.get('username')
         password = request.data.get('password')
@@ -35,16 +47,32 @@ def register(request):
         user = User.create_user(username=username, password=password)
         return JsonResponse({'message': 'Pomyslnie zarejestrowano uzytkownika.'}, status=201)
 
+@swagger_auto_schema(
+    method='post',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'username': openapi.Schema(type=openapi.TYPE_STRING, example='testusername'),
+            'password': openapi.Schema(type=openapi.TYPE_STRING,example='testpassword'),
+        },
+        required=['username', 'password'],
+    ),
+    responses={
+        200: openapi.Response('Pomyślnie zalogowano'),
+        400: openapi.Response('Bad Request'),
+        500: openapi.Response('Internal Server Error'),
+    },
+)
 @api_view(['POST'])
 @permission_classes([AllowAny]) #dostepne dla kazdego
 @csrf_exempt
 def login_view(request):
     """
-     Create one, or many, Personnel
-    
-     This method will create as many Personnel as are passed into the payload. The payload needs to be either a \
-     list of dictionaries or a single dictionary. The response will be in JSON format with the results of the \
-     creations under the 'data' key
+    Api pozwalające się zalogować i otrzymać token JWT
+    Wymagane paramtry:
+        -username: login użytkownika
+        -password: hasło użytkownika
+        
     """
     if request.method == 'POST':
         username = request.data.get('username')
@@ -88,7 +116,7 @@ def logout_view(request):
 
         return JsonResponse({'message': 'Poprawnie wylogowano.'}, status=200)
     else:
-        return JsonResponse({'error': 'Bledna metoda.'}, status=405) #gdy bedzie GET
+        return JsonResponse({'error': 'Bledna metoda.'}, status=405)
 
 def custom_authenticate(username, password):
     try:

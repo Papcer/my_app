@@ -29,12 +29,10 @@ from drf_yasg import openapi
 
 schema_view = get_schema_view(
     openapi.Info(
-        title="Your API",
-        default_version='v1',
-        description="Your API description",
-        terms_of_service="https://www.yourapp.com/terms/",
-        contact=openapi.Contact(email="contact@yourapp.com"),
-        license=openapi.License(name="Your License"),
+        title="Strona z API",
+        default_version='v1.0.0',
+        description="Dokumentacja wszystkich API na serwerze, "
+                    "Autoryzacja po wywołaniu metody login i otrzymaniu tokenu Bearer <access_token>",
     ),
     public=True,
     permission_classes=(permissions.AllowAny,),
